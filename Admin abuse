@@ -1,0 +1,615 @@
+
+--==================================================
+-- WEEKLY CODE SNIPER - CZ USER
+-- Mobile + PC | Draggable GUI
+-- Roblox Studio - LocalScript
+--==================================================
+
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+
+local Old = PlayerGui:FindFirstChild("WeeklyCodeSniperUI")
+if Old then Old:Destroy() end
+
+local Config = {
+    AutoListen = true,
+    SpamRedeem = true,
+    SpamCount = 25,
+    AutoSubmit = true,
+    AutoGuess = false,
+    Anchor = false,
+    AntiRagdoll = false,
+    AntiLag = true,
+    BlockEvents = false,
+    GUIscale = 0.86,
+    ListenKey = "C",
+    BackgroundID = "117278680774265",
+    SubmitAfter = 1
+}
+
+local Theme = {
+    Background = Color3.fromRGB(13, 14, 19),
+    Panel = Color3.fromRGB(24, 25, 33),
+    Button = Color3.fromRGB(39, 41, 52),
+    Red = Color3.fromRGB(145, 35, 43),
+    Green = Color3.fromRGB(24, 115, 69),
+    Blue = Color3.fromRGB(65, 115, 220),
+    White = Color3.fromRGB(245, 245, 250),
+    Gray = Color3.fromRGB(145, 148, 160)
+}
+
+local Screen = Instance.new("ScreenGui")
+Screen.Name = "WeeklyCodeSniperUI"
+Screen.ResetOnSpawn = false
+Screen.IgnoreGuiInset = true
+Screen.Parent = PlayerGui
+
+local Scale = Instance.new("UIScale")
+Scale.Scale = Config.GUIscale
+Scale.Parent = Screen
+
+local function Create(class, props, parent)
+    local obj = Instance.new(class)
+    for k, v in pairs(props or {}) do
+        obj[k] = v
+    end
+    obj.Parent = parent
+    return obj
+end
+
+local function Corner(obj, radius)
+    Create("UICorner", {
+        CornerRadius = UDim.new(0, radius or 12)
+    }, obj)
+end
+
+local function Stroke(obj, color, thickness)
+    return Create("UIStroke", {
+        Color = color or Color3.fromRGB(65, 67, 80),
+        Thickness = thickness or 1,
+        Transparency = 0.2
+    }, obj)
+end
+
+local function Label(parent, text, size, position, dimensions)
+    return Create("TextLabel", {
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = Theme.White,
+        Font = Enum.Font.GothamBold,
+        TextSize = size or 14,
+        Position = position,
+        Size = dimensions,
+        TextXAlignment = Enum.TextXAlignment.Left
+    }, parent)
+end
+
+local function Button(parent, text, position, dimensions, color)
+    local b = Create("TextButton", {
+        Text = text,
+        Font = Enum.Font.GothamBold,
+        TextSize = 14,
+        TextColor3 = Theme.White,
+        BackgroundColor3 = color or Theme.Button,
+        Position = position,
+        Size = dimensions,
+        AutoButtonColor = true
+    }, parent)
+    Corner(b, 11)
+    Stroke(b)
+    return b
+end
+
+-- Main window
+
+local Main = Create("Frame", {
+    Name = "MainWindow",
+    Size = UDim2.new(0, 380, 0, 480),
+    Position = UDim2.new(0.5, -190, 0.5, -240),
+    BackgroundColor3 = Theme.Background,
+    BorderSizePixel = 0,
+    Active = true
+}, Screen)
+
+Corner(Main, 18)
+Stroke(Main, Color3.fromRGB(75, 77, 95), 1.4)
+
+local MainTitle = Label(
+    Main,
+    "WEEKLY CODE SNIPER",
+    19,
+    UDim2.new(0, 18, 0, 12),
+    UDim2.new(1, -80, 0, 35)
+)
+
+local Minimize = Button(
+    Main, "−",
+    UDim2.new(1, -48, 0, 10),
+    UDim2.new(0, 36, 0, 32)
+)
+
+local Tabs = Create("Frame", {
+    BackgroundTransparency = 1,
+    Position = UDim2.new(0, 12, 0, 55),
+    Size = UDim2.new(1, -24, 0, 43)
+}, Main)
+
+local TabLayout = Create("UIListLayout", {
+    FillDirection = Enum.FillDirection.Horizontal,
+    Padding = UDim.new(0, 7),
+    SortOrder = Enum.SortOrder.LayoutOrder
+}, Tabs)
+
+local Pages = {}
+
+local function NewPage(name)
+    local page = Create("ScrollingFrame", {
+        Name = name,
+        Position = UDim2.new(0, 12, 0, 108),
+        Size = UDim2.new(1, -24, 1, -120),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = Theme.Blue,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        Visible = false
+    }, Main)
+
+    local layout = Create("UIListLayout", {
+        Padding = UDim.new(0, 9),
+        SortOrder = Enum.SortOrder.LayoutOrder
+    }, page)
+
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        page.CanvasSize = UDim2.new(
+            0, 0, 0, layout.AbsoluteContentSize.Y + 12
+        )
+    end)
+
+    Pages[name] = page
+    return page
+end
+
+local MainPage = NewPage("Main")
+local SettingsPage = NewPage("Settings")
+local HelperPage = NewPage("AA Helper")
+
+local function SwitchPage(name)
+    for n, page in pairs(Pages) do
+        page.Visible = n == name
+    end
+
+    for _, child in ipairs(Tabs:GetChildren()) do
+        if child:IsA("TextButton") then
+            child.BackgroundColor3 =
+                child.Name == name and Theme.Blue or Theme.Button
+        end
+    end
+end
+
+for _, name in ipairs({"Main", "Settings", "AA Helper"}) do
+    local b = Button(
+        Tabs,
+        name,
+        UDim2.new(),
+        UDim2.new(0.333, -5, 1, 0)
+    )
+    b.Name = name
+    b.MouseButton1Click:Connect(function()
+        SwitchPage(name)
+    end)
+end
+
+-- Status
+
+local Status = Label(
+    MainPage,
+    "●  READY",
+    14,
+    UDim2.new(),
+    UDim2.new(1, 0, 0, 25)
+)
+Status.TextColor3 = Color3.fromRGB(80, 205, 120)
+
+-- Code input
+
+Label(
+    MainPage,
+    "REDEEM CODE",
+    13,
+    UDim2.new(),
+    UDim2.new(1, 0, 0, 20)
+)
+
+local CodeBox = Create("TextBox", {
+    PlaceholderText = "Enter code here...",
+    Text = "",
+    ClearTextOnFocus = false,
+    Font = Enum.Font.Gotham,
+    TextSize = 15,
+    TextColor3 = Theme.White,
+    PlaceholderColor3 = Theme.Gray,
+    BackgroundColor3 = Theme.Panel,
+    Size = UDim2.new(1, 0, 0, 58),
+    TextXAlignment = Enum.TextXAlignment.Left
+}, MainPage)
+
+Corner(CodeBox, 12)
+Stroke(CodeBox)
+
+local RedeemRow = Create("Frame", {
+    BackgroundTransparency = 1,
+    Size = UDim2.new(1, 0, 0, 45)
+}, MainPage)
+
+local RedeemLayout = Create("UIListLayout", {
+    FillDirection = Enum.FillDirection.Horizontal,
+    Padding = UDim.new(0, 8)
+}, RedeemRow)
+
+local Clear = Button(
+    RedeemRow, "CLEAR",
+    UDim2.new(),
+    UDim2.new(0.5, -4, 1, 0),
+    Theme.Red
+)
+
+local Redeem = Button(
+    RedeemRow, "REDEEM",
+    UDim2.new(),
+    UDim2.new(0.5, -4, 1, 0),
+    Theme.Green
+)
+
+Clear.MouseButton1Click:Connect(function()
+    CodeBox.Text = ""
+    Status.Text = "●  CLEARED"
+end)
+
+Redeem.MouseButton1Click:Connect(function()
+    if CodeBox.Text == "" then
+        Status.Text = "●  ENTER A CODE"
+    else
+        Status.Text = "●  REDEEM NOT CONNECTED"
+    end
+end)
+
+-- Toggle creator
+
+local function AddToggle(parent, name, key, default)
+    Config[key] = default
+
+    local row = Create("Frame", {
+        BackgroundColor3 = Theme.Panel,
+        Size = UDim2.new(1, 0, 0, 43),
+        BorderSizePixel = 0
+    }, parent)
+
+    Corner(row, 10)
+
+    Label(
+        row, name, 13,
+        UDim2.new(0, 12, 0, 0),
+        UDim2.new(1, -100, 1, 0)
+    )
+
+    local toggle = Button(
+        row,
+        default and "ON" or "OFF",
+        UDim2.new(1, -82, 0, 6),
+        UDim2.new(0, 70, 0, 31),
+        default and Theme.Green or Theme.Button
+    )
+
+    toggle.MouseButton1Click:Connect(function()
+        Config[key] = not Config[key]
+        toggle.Text = Config[key] and "ON" or "OFF"
+        toggle.BackgroundColor3 =
+            Config[key] and Theme.Green or Theme.Button
+    end)
+
+    return row
+end
+
+-- Main options
+
+Label(
+    MainPage, "MAIN OPTIONS", 14,
+    UDim2.new(),
+    UDim2.new(1, 0, 0, 25)
+)
+
+AddToggle(MainPage, "Auto Listen", "AutoListen", true)
+AddToggle(MainPage, "Auto Submit", "AutoSubmit", true)
+AddToggle(MainPage, "Auto Guess", "AutoGuess", false)
+
+Label(
+    MainPage, "SUBMIT AFTER WORDS", 13,
+    UDim2.new(),
+    UDim2.new(1, 0, 0, 22)
+)
+
+local WordRow = Create("Frame", {
+    BackgroundTransparency = 1,
+    Size = UDim2.new(1, 0, 0, 40)
+}, MainPage)
+
+local WordLayout = Create("UIListLayout", {
+    FillDirection = Enum.FillDirection.Horizontal,
+    Padding = UDim.new(0, 7)
+}, WordRow)
+
+for i = 1, 4 do
+    local b = Button(
+        WordRow,
+        tostring(i),
+        UDim2.new(),
+        UDim2.new(0.25, -6, 1, 0),
+        i == Config.SubmitAfter and Theme.Blue or Theme.Button
+    )
+
+    b.MouseButton1Click:Connect(function()
+        Config.SubmitAfter = i
+
+        for _, button in ipairs(WordRow:GetChildren()) do
+            if button:IsA("TextButton") then
+                button.BackgroundColor3 =
+                    button.Text == tostring(i)
+                    and Theme.Blue or Theme.Button
+            end
+        end
+    end)
+end
+
+-- Settings
+
+Label(
+    SettingsPage, "GENERAL SETTINGS", 14,
+    UDim2.new(),
+    UDim2.new(1, 0, 0, 25)
+)
+
+AddToggle(SettingsPage, "Spam Redeem", "SpamRedeem", true)
+
+Label(
+    SettingsPage, "Spam Count", 13,
+    UDim2.new(),
+    UDim2.new(1, 0, 0, 20)
+)
+
+local CountBox = Create("TextBox", {
+    Text = tostring(Config.SpamCount),
+    Font = Enum.Font.GothamBold,
+    TextSize = 15,
+    TextColor3 = Theme.White,
+    BackgroundColor3 = Theme.Panel,
+    Size = UDim2.new(1, 0, 0, 38),
+    ClearTextOnFocus = false
+}, SettingsPage)
+
+Corner(CountBox, 10)
+
+CountBox.FocusLost:Connect(function()
+    Config.SpamCount = math.clamp(
+        tonumber(CountBox.Text) or 25, 1, 100
+    )
+    CountBox.Text = tostring(Config.SpamCount)
+end)
+
+Label(
+    SettingsPage, "LISTEN KEY", 13,
+    UDim2.new(),
+    UDim2.new(1, 0, 0, 20)
+)
+
+local KeyBox = Create("TextBox", {
+    Text = Config.ListenKey,
+    Font = Enum.Font.GothamBold,
+    TextSize = 15,
+    TextColor3 = Theme.White,
+    BackgroundColor3 = Theme.Panel,
+    Size = UDim2.new(1, 0, 0, 38),
+    ClearTextOnFocus = false
+}, SettingsPage)
+
+Corner(KeyBox, 10)
+
+KeyBox.FocusLost:Connect(function()
+    Config.ListenKey = KeyBox.Text
+end)
+
+Label(
+    SettingsPage, "GUI SCALE", 13,
+    UDim2.new(),
+    UDim2.new(1, 0, 0, 20)
+)
+
+local ScaleSlider = Create("TextButton", {
+    Text = "86%",
+    Font = Enum.Font.GothamBold,
+    TextSize = 14,
+    TextColor3 = Theme.White,
+    BackgroundColor3 = Theme.Panel,
+    Size = UDim2.new(1, 0, 0, 38)
+}, SettingsPage)
+
+Corner(ScaleSlider, 10)
+
+ScaleSlider.MouseButton1Click:Connect(function()
+    Config.GUIscale = Config.GUIscale >= 1 and 0.5
+        or Config.GUIscale + 0.1
+
+    Scale.Scale = Config.GUIscale
+    ScaleSlider.Text = tostring(
+        math.floor(Config.GUIscale * 100)
+    ) .. "%"
+end)
+
+Label(
+    SettingsPage, "BACKGROUND IMAGE ID", 13,
+    UDim2.new(),
+    UDim2.new(1, 0, 0, 20)
+)
+
+local BackgroundBox = Create("TextBox", {
+    Text = Config.BackgroundID,
+    Font = Enum.Font.Gotham,
+    TextSize = 13,
+    TextColor3 = Theme.White,
+    BackgroundColor3 = Theme.Panel,
+    Size = UDim2.new(1, 0, 0, 38),
+    ClearTextOnFocus = false
+}, SettingsPage)
+
+Corner(BackgroundBox, 10)
+
+BackgroundBox.FocusLost:Connect(function()
+    Config.BackgroundID = BackgroundBox.Text
+end)
+
+-- AA Helper
+
+Label(
+    HelperPage, "CHARACTER OPTIONS", 14,
+    UDim2.new(),
+    UDim2.new(1, 0, 0, 25)
+)
+
+AddToggle(HelperPage, "Anchor Character", "Anchor", false)
+AddToggle(HelperPage, "Anti Ragdoll", "AntiRagdoll", false)
+AddToggle(HelperPage, "Anti Lag", "AntiLag", true)
+AddToggle(HelperPage, "Block Events", "BlockEvents", false)
+
+Label(
+    HelperPage,
+    "These controls are visual settings only.",
+    11,
+    UDim2.new(),
+    UDim2.new(1, 0, 0, 28)
+).TextColor3 = Theme.Gray
+
+-- Minimize
+
+local minimized = false
+
+Minimize.MouseButton1Click:Connect(function()
+    minimized = not minimized
+
+    for _, child in ipairs(Main:GetChildren()) do
+        if child ~= MainTitle and child ~= Minimize then
+            child.Visible = not minimized
+        end
+    end
+
+    Main.Size = minimized
+        and UDim2.new(0, 380, 0, 55)
+        or UDim2.new(0, 380, 0, 480)
+
+    Minimize.Text = minimized and "+" or "−"
+end)
+
+-- DRAG ANYWHERE: Mouse + Touch
+
+local dragging = false
+local dragInput = nil
+local dragStart = nil
+local startPosition = nil
+local dragMoved = false
+
+local function InsideWindow(position)
+    local p = Main.AbsolutePosition
+    local s = Main.AbsoluteSize
+
+    return position.X >= p.X
+        and position.X <= p.X + s.X
+        and position.Y >= p.Y
+        and position.Y <= p.Y + s.Y
+end
+
+UIS.InputBegan:Connect(function(input)
+    if input.UserInputType ~= Enum.UserInputType.MouseButton1
+        and input.UserInputType ~= Enum.UserInputType.Touch then
+        return
+    end
+
+    if not InsideWindow(input.Position) then return end
+
+    local objects = PlayerGui:GetGuiObjectsAtPosition(
+        input.Position.X, input.Position.Y
+    )
+
+    local textFocused = UIS:GetFocusedTextBox()
+    if textFocused then return end
+
+    dragging = true
+    dragMoved = false
+    dragStart = input.Position
+    startPosition = Main.Position
+    dragInput = input
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if not dragging then return end
+
+    if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+        local delta = input.Position - dragStart
+
+        if delta.Magnitude > 5 then
+            dragMoved = true
+        end
+
+        if dragMoved then
+            Main.Position = UDim2.new(
+                startPosition.X.Scale,
+                startPosition.X.Offset + delta.X,
+                startPosition.Y.Scale,
+                startPosition.Y.Offset + delta.Y
+            )
+        end
+    end
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input == dragInput
+        or input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+        dragging = false
+        dragInput = nil
+    end
+end)
+
+-- Responsive screen
+
+local function UpdateScale()
+    local camera = workspace.CurrentCamera
+    if not camera then return end
+
+    local viewport = camera.ViewportSize
+
+    if viewport.X < 500 then
+        Scale.Scale = math.min(
+            Config.GUIscale,
+            (viewport.X - 25) / 380
+        )
+    else
+        Scale.Scale = Config.GUIscale
+    end
+end
+
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(UpdateScale)
+
+if workspace.CurrentCamera then
+    workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(UpdateScale)
+end
+
+UpdateScale()
+SwitchPage("Main")
+
+print("[CZ] Weekly Code Sniper UI loaded successfully!")
